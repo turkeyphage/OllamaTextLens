@@ -1,5 +1,5 @@
 {
-  "Help": "在 PDF 中反白文字，按 Ctrl + Alt + T。翻譯與簡短解釋會顯示在滑鼠旁。可最小化此視窗；關閉則結束程式。",
+  "Help": "在 PDF 中選取文字後按 Ctrl + Alt + T，即可在滑鼠旁查看翻譯與簡短解釋。關閉此視窗會縮至系統匣並保留快捷鍵；雙擊系統匣圖示可開啟設定，右鍵選「結束程式」才會退出。",
   "Endpoint": "Ollama 本機位址",
   "Model": "模型（請先在 Ollama 下載聊天模型）",
   "Interface": "介面語言",
@@ -38,5 +38,7 @@
   "ProviderFailed": "Ollama 回應錯誤，請確認模型已下載且支援聊天。",
   "StreamIncomplete": "連線提前中斷，結果可能不完整，請重試。",
   "EmptyResponse": "模型未傳回文字，請嘗試其他聊天模型。",
-  "RestartFailed": "舊的 OllamaTextLens 尚未退出，或無法取得啟動鎖。請先關閉舊程式，再重新開啟。"
+  "RestartFailed": "舊的 OllamaTextLens 尚未退出，或無法取得啟動鎖。請先關閉舊程式，再重新開啟。",
+  "TrayOpen": "開啟設定",
+  "TrayExit": "結束程式"
 }

@@ -3,15 +3,16 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>OllamaTextLens</AssemblyName>
-    <Version>0.2.2</Version>
+    <Version>0.2.3</Version>
     <RootNamespace>OllamaTextLens</RootNamespace>
     <Product>OllamaTextLens</Product>
     <Title>OllamaTextLens</Title>
     <Description>Windows text translation and plain-language explanations powered by local Ollama models.</Description>
   </PropertyGroup>
-  <ItemGroup><Compile Remove="tests/**/*.cs" /></ItemGroup>
+  <ItemGroup><Compile Remove="tests/**/*.cs" /><Using Remove="System.Windows.Forms" /><Using Remove="System.Drawing" /></ItemGroup>
   <ItemGroup><EmbeddedResource Include="Locales/*.json" /></ItemGroup>
 </Project>

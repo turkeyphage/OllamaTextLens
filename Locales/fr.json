@@ -1,5 +1,5 @@
 {
-  "Help": "Sélectionnez du texte dans un PDF et appuyez sur Ctrl + Alt + T. La traduction et une courte explication apparaissent près du pointeur. Vous pouvez réduire cette fenêtre ; la fermer quitte l’application.",
+  "Help": "Sélectionnez du texte dans le PDF et appuyez sur Ctrl + Alt + T pour afficher une traduction et une brève explication. Fermer cette fenêtre garde l’application dans la zone de notification avec le raccourci actif. Double-cliquez sur l’icône pour ouvrir les paramètres ; faites un clic droit et choisissez Quitter pour fermer l’application.",
   "Endpoint": "Adresse locale d’Ollama",
   "Model": "Modèle (téléchargez d’abord un modèle de chat dans Ollama)",
   "Interface": "Langue de l’interface",
@@ -38,5 +38,7 @@
   "ProviderFailed": "Ollama a renvoyé une erreur. Vérifiez que le modèle est installé et prend en charge le chat.",
   "StreamIncomplete": "La connexion s’est interrompue. Le résultat peut être incomplet. Veuillez réessayer.",
   "EmptyResponse": "Le modèle n’a renvoyé aucun texte. Essayez un autre modèle de chat.",
-  "RestartFailed": "L’instance précédente d’OllamaTextLens ne s’est pas fermée ou le verrou de démarrage est indisponible. Fermez l’application précédente puis réessayez."
+  "RestartFailed": "L’instance précédente d’OllamaTextLens ne s’est pas fermée ou le verrou de démarrage est indisponible. Fermez l’application précédente puis réessayez.",
+  "TrayOpen": "Ouvrir les paramètres",
+  "TrayExit": "Quitter"
 }
