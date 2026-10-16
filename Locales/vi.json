@@ -1,5 +1,5 @@
 {
-  "Help": "Chọn văn bản trong PDF rồi nhấn Ctrl + Alt + T. Bản dịch và giải thích ngắn sẽ xuất hiện cạnh con trỏ. Có thể thu nhỏ cửa sổ; đóng cửa sổ sẽ thoát ứng dụng.",
+  "Help": "Chọn văn bản PDF và nhấn Ctrl + Alt + T để xem bản dịch và giải thích ngắn. Đóng cửa sổ này sẽ giữ ứng dụng trong khay hệ thống và phím tắt vẫn hoạt động. Nhấp đúp biểu tượng để mở cài đặt; nhấp chuột phải và chọn Thoát để đóng ứng dụng.",
   "Endpoint": "Địa chỉ Ollama trên máy",
   "Model": "Mô hình (hãy tải mô hình trò chuyện trong Ollama trước)",
   "Interface": "Ngôn ngữ giao diện",
@@ -38,5 +38,7 @@
   "ProviderFailed": "Ollama báo lỗi. Kiểm tra mô hình đã cài và có hỗ trợ trò chuyện.",
   "StreamIncomplete": "Kết nối bị ngắt sớm, kết quả có thể chưa đầy đủ. Hãy thử lại.",
   "EmptyResponse": "Mô hình không trả về văn bản. Hãy thử mô hình trò chuyện khác.",
-  "RestartFailed": "OllamaTextLens trước đó chưa thoát hoặc không lấy được khóa khởi động. Hãy đóng ứng dụng cũ rồi thử lại."
+  "RestartFailed": "OllamaTextLens trước đó chưa thoát hoặc không lấy được khóa khởi động. Hãy đóng ứng dụng cũ rồi thử lại.",
+  "TrayOpen": "Mở cài đặt",
+  "TrayExit": "Thoát"
 }

@@ -8,6 +8,7 @@ namespace OllamaTextLens;
 public partial class MainWindow : Window
 {
     readonly Popup popup=new();
+    readonly TrayIcon tray;
     CancellationTokenSource? pending;
     bool capturing;
     HwndSource? source;
@@ -40,6 +41,7 @@ public partial class MainWindow : Window
         TargetLanguage.ItemsSource=Languages.Targets;
         InterfaceLanguage.SelectedValue=uiLanguage;
         TargetLanguage.SelectedValue=targetLanguage;
+        tray=new TrayIcon(ShowSettings,()=> { App.IsExiting=true; Application.Current.Shutdown(); });
         languagesReady=true;
         ApplyLanguage();
         popup.Dismissed+=()=>pending?.Cancel();
@@ -49,8 +51,17 @@ public partial class MainWindow : Window
             if(!hotkeyRegistered) SetStatus("HotkeyBusy");
         };
         Loaded+=async(_,_)=>await Refresh();
-        Closing+=(_,_)=>App.IsExiting=true;
-        Closed+=(_,_)=> { pending?.Cancel(); if(source!=null) { Native.UnregisterHotKey(source.Handle,1); source.RemoveHook(Hook); } };
+        Closing+=(_,e)=> {
+            if(App.IsExiting) return;
+            e.Cancel=true; Hide();
+        };
+        Closed+=(_,_)=> { tray.Dispose(); pending?.Cancel(); if(source!=null) { Native.UnregisterHotKey(source.Handle,1); source.RemoveHook(Hook); } };
+    }
+    void ShowSettings()
+    {
+        Show();
+        if(WindowState==WindowState.Minimized) WindowState=WindowState.Normal;
+        Activate();
     }
     void ApplyLanguage()
     {
@@ -60,6 +71,7 @@ public partial class MainWindow : Window
         RefreshButton.Content=T("Refresh"); SaveButton.Content=T("Save"); TestButton.Content=T("Test");
         Status.Text=T(statusKey)+(statusDetail.Length==0?"":" "+statusDetail);
         popup.SetLanguage(uiLanguage);
+        tray.SetLanguage(uiLanguage);
         Language=System.Windows.Markup.XmlLanguage.GetLanguage(uiLanguage);
     }
     void SetStatus(string key,string detail="") { statusKey=key; statusDetail=detail; Status.Text=I18n.Text(uiLanguage,key)+(detail.Length==0?"":" "+detail); }

@@ -38,6 +38,12 @@ public partial class App : Application
         settingsWindow.Show();
     }
 
+    protected override void OnSessionEnding(SessionEndingCancelEventArgs e)
+    {
+        IsExiting=true;
+        base.OnSessionEnding(e);
+    }
+
     protected override void OnExit(ExitEventArgs e)
     {
         IsExiting=true;
