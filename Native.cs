@@ -22,6 +22,6 @@ internal static class Native
     {
         Input Key(ushort key, bool up=false) => new() { Type=1, Data=new InputUnion { Keyboard=new Keyboard { Key=key, Flags=up?2u:0u } } };
         Input[] inputs=[Key(0x11),Key(0x43),Key(0x43,true),Key(0x11,true)];
-        if (SendInput(4,inputs,Marshal.SizeOf<Input>())!=4) throw new InvalidOperationException("無法取得文字。請確認 PDF 閱讀器未以系統管理員身分執行。");
+        if (SendInput(4,inputs,Marshal.SizeOf<Input>())!=4) throw new AppError("CaptureBlocked");
     }
 }

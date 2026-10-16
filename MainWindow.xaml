@@ -1,17 +1,23 @@
-<Window x:Class="OllamaTextLens.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="OllamaTextLens" Width="590" Height="480" MinWidth="490" MinHeight="440" Background="#F4F6FA" FontFamily="Microsoft JhengHei UI" FontSize="14">
+<Window x:Class="OllamaTextLens.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="OllamaTextLens" Width="640" Height="650" MinWidth="490" MinHeight="440" Background="#F4F6FA" FontFamily="Segoe UI, Microsoft JhengHei UI" FontSize="14">
+  <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
   <StackPanel Margin="28">
     <TextBlock Text="OllamaTextLens" FontSize="25" FontWeight="Bold"/>
-    <TextBlock Margin="0,12,0,20" TextWrapping="Wrap" Text="在 PDF 中反白文字，按 Ctrl + Alt + T。翻譯與白話解釋會顯示在滑鼠旁。此視窗可以最小化；關閉則結束程式。"/>
-    <TextBlock Text="Ollama 本機位址"/>
+    <TextBlock x:Name="HelpLabel" Margin="0,12,0,20" TextWrapping="Wrap"/>
+    <TextBlock x:Name="InterfaceLabel" TextWrapping="Wrap"/>
+    <ComboBox x:Name="InterfaceLanguage" DisplayMemberPath="Name" SelectedValuePath="Id" SelectionChanged="Language_Changed" Margin="0,6,0,12" Padding="8"/>
+    <TextBlock x:Name="TargetLabel" TextWrapping="Wrap"/>
+    <ComboBox x:Name="TargetLanguage" DisplayMemberPath="Name" SelectedValuePath="Id" SelectionChanged="Language_Changed" Margin="0,6,0,12" Padding="8"/>
+    <TextBlock x:Name="EndpointLabel" TextWrapping="Wrap"/>
     <TextBox x:Name="Endpoint" Margin="0,6,0,12" Text="http://127.0.0.1:11434"/>
-    <TextBlock Text="模型（請先在 Ollama 下載模型）"/>
+    <TextBlock x:Name="ModelLabel" TextWrapping="Wrap"/>
     <ComboBox x:Name="Models" IsEditable="True" Margin="0,6,0,18" Padding="8"/>
     <WrapPanel>
-      <Button Content="重新讀取模型" Click="Refresh_Click"/>
-      <Button Content="儲存設定" Click="Save_Click"/>
-      <Button Content="測試翻譯" Click="Test_Click"/>
+      <Button x:Name="RefreshButton" Click="Refresh_Click" Margin="0,0,8,8"/>
+      <Button x:Name="SaveButton" Click="Save_Click" Margin="0,0,8,8"/>
+      <Button x:Name="TestButton" Click="Test_Click" Margin="0,0,8,8"/>
     </WrapPanel>
     <TextBlock x:Name="Status" Margin="0,20,0,0" TextWrapping="Wrap" Foreground="#334155"/>
-    <TextBlock Margin="0,16,0,0" FontSize="12" Foreground="#64748B" TextWrapping="Wrap" Text="僅連線至本機 Ollama，不保存閱讀內容。取詞會暫時使用剪貼簿。掃描圖片 PDF 目前不支援，請先進行 OCR。"/>
+    <TextBlock x:Name="PrivacyLabel" Margin="0,16,0,0" FontSize="12" Foreground="#64748B" TextWrapping="Wrap"/>
   </StackPanel>
+  </ScrollViewer>
 </Window>

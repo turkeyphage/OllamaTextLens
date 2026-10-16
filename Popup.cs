@@ -12,38 +12,58 @@ internal sealed class Popup : Window
     readonly TextBox explanation=TextArea();
     readonly ScrollViewer scroll=new() { VerticalScrollBarVisibility=ScrollBarVisibility.Auto, HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled };
     readonly TextBlock state=new() { Foreground=Brushes.SlateGray, Margin=new Thickness(0,8,0,8) };
+    readonly TextBlock heading=new() { FontWeight=FontWeights.Bold, FontSize=18, TextWrapping=TextWrapping.Wrap, VerticalAlignment=VerticalAlignment.Center };
+    readonly Button close=new() { HorizontalAlignment=HorizontalAlignment.Right };
+    readonly TextBlock originalLabel=new(), translationLabel=new(), explanationLabel=new();
+    string uiLanguage="zh-TW", targetLanguage="zh-TW", statusKey="Preparing";
+    object[] statusArgs=[];
+    Exception? shownError;
     internal event Action? Dismissed;
     internal Popup()
     {
         Title="翻譯與白話解釋"; Width=500; Height=560; MinWidth=320; MinHeight=220; Topmost=true; ShowInTaskbar=false; ShowActivated=false;
-        FontFamily=new FontFamily("Microsoft JhengHei UI"); Background=new SolidColorBrush(Color.FromRgb(250,252,255));
+        FontFamily=new FontFamily("Segoe UI, Microsoft JhengHei UI"); Background=new SolidColorBrush(Color.FromRgb(250,252,255));
         var grid=new Grid { Margin=new Thickness(18) };
         grid.RowDefinitions.Add(new RowDefinition { Height=GridLength.Auto });
         grid.RowDefinitions.Add(new RowDefinition { Height=GridLength.Auto });
         grid.RowDefinitions.Add(new RowDefinition());
         var header=new DockPanel();
-        var close=new Button { Content="關閉 · Esc", HorizontalAlignment=HorizontalAlignment.Right }; close.Click+=(_,_)=>Dismiss(); DockPanel.SetDock(close,Dock.Right); header.Children.Add(close);
-        header.Children.Add(new TextBlock { Text="翻譯與白話解釋", FontWeight=FontWeights.Bold,FontSize=18,VerticalAlignment=VerticalAlignment.Center });
+        close.Click+=(_,_)=>Dismiss(); DockPanel.SetDock(close,Dock.Right); header.Children.Add(close);
+        header.Children.Add(heading);
         var sections=new StackPanel { Margin=new Thickness(0,8,10,0) };
-        void AddSection(string title,TextBox text,bool first=false)
+        void AddSection(TextBlock label,TextBox text,bool first=false)
         {
             var content=new StackPanel();
-            content.Children.Add(new TextBlock { Text=title, FontWeight=FontWeights.SemiBold,FontSize=15,Foreground=Brushes.SlateGray });
+            label.FontWeight=FontWeights.SemiBold; label.FontSize=15; label.Foreground=Brushes.SlateGray; label.TextWrapping=TextWrapping.Wrap;
+            content.Children.Add(label);
             content.Children.Add(text);
             sections.Children.Add(new Border { Child=content, Margin=new Thickness(0,first?0:24,0,0), Padding=new Thickness(0,first?0:20,0,0), BorderThickness=new Thickness(0,first?0:1,0,0), BorderBrush=new SolidColorBrush(Color.FromRgb(222,228,237)) });
         }
-        AddSection("【原文】",original,true);
-        AddSection("【繁體中文翻譯】",translation);
-        AddSection("【白話解釋】",explanation);
+        AddSection(originalLabel,original,true);
+        AddSection(translationLabel,translation);
+        AddSection(explanationLabel,explanation);
         scroll.Content=sections;
         grid.Children.Add(header); Grid.SetRow(state,1); grid.Children.Add(state); Grid.SetRow(scroll,2); grid.Children.Add(scroll); Content=grid;
         PreviewKeyDown+=(_,e)=> { if(e.Key==Key.Escape) Dismiss(); };
         Closing+=(_,e)=> { e.Cancel=true; Dismiss(); };
+        SetLanguage(uiLanguage);
     }
     void Dismiss() { Hide(); Dismissed?.Invoke(); }
-    internal void Begin(Native.Point point,string source,string originalText="")
+    internal void SetLanguage(string language)
     {
-        original.Text=originalText; translation.Text=""; explanation.Text=""; state.Text=source;
+        uiLanguage=Languages.Ui(language).Id;
+        Language=System.Windows.Markup.XmlLanguage.GetLanguage(uiLanguage);
+        Title=heading.Text=I18n.Text(uiLanguage,"PopupTitle"); close.Content=I18n.Text(uiLanguage,"Close");
+        originalLabel.Text=I18n.Text(uiLanguage,"Original");
+        translationLabel.Text=I18n.Text(uiLanguage,"Translation",Languages.Target(targetLanguage).Name);
+        explanationLabel.Text=I18n.Text(uiLanguage,"Explanation");
+        Status(statusKey,statusArgs);
+        if(shownError!=null) translation.Text=I18n.Error(uiLanguage,shownError);
+    }
+    internal void Begin(Native.Point point,string source,string originalText="",string target="zh-TW")
+    {
+        original.Text=originalText; translation.Text=""; explanation.Text=""; shownError=null;
+        targetLanguage=Languages.Target(target).Id; Status(source); SetLanguage(uiLanguage);
         scroll.ScrollToTop();
         Show();
         var transform=PresentationSource.FromVisual(this)?.CompositionTarget?.TransformFromDevice ?? Matrix.Identity;
@@ -59,13 +79,8 @@ internal sealed class Popup : Window
     }
     internal void Update(string text)
     {
-        const string translationHeader="【繁體中文翻譯】", explanationHeader="【白話解釋】";
-        int start=text.IndexOf(translationHeader,StringComparison.Ordinal);
-        if(start>=0) text=text[(start+translationHeader.Length)..];
-        int split=text.IndexOf(explanationHeader,StringComparison.Ordinal);
-        string Clean(string value) => value.Trim().Trim('*','#').Trim();
-        translation.Text=Clean(split<0?text:text[..split]);
-        explanation.Text=split<0?"":Clean(text[(split+explanationHeader.Length)..]);
+        (translation.Text,explanation.Text)=TranslationSections.Parse(text);
     }
-    internal void Status(string text) => state.Text=text;
+    internal void ShowError(Exception error) { shownError=error; translation.Text=I18n.Error(uiLanguage,error); explanation.Text=""; }
+    internal void Status(string key,params object[] args) { statusKey=key; statusArgs=args; state.Text=I18n.Text(uiLanguage,key,args); }
 }

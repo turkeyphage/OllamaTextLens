@@ -12,4 +12,5 @@
     <Description>Windows text translation and plain-language explanations powered by local Ollama models.</Description>
   </PropertyGroup>
   <ItemGroup><Compile Remove="tests/**/*.cs" /></ItemGroup>
+  <ItemGroup><EmbeddedResource Include="Locales/*.json" /></ItemGroup>
 </Project>
