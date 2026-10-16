@@ -1,0 +1,84 @@
+name: OllamaTextLens CI and Release
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Build and smoke tests
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build Windows application
+        run: dotnet build OllamaTextLens.csproj -c Release
+      - name: Test Ollama client without a local model
+        run: dotnet run --project tests/Smoke.csproj -c Release
+
+  package:
+    name: Package Windows x64
+    needs: validate
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+      - name: Determine version
+        id: version
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if ($env:REF_TYPE -eq 'tag') {
+            $version = $env:REF_NAME -replace '^v', ''
+          } else {
+            $version = "0.0.0-dev.$env:GITHUB_RUN_NUMBER"
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+      - name: Publish single-file EXE and ZIP
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: ./scripts/publish.ps1 -Version $env:RELEASE_VERSION
+      - name: Save downloadable workflow artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: OllamaTextLens-${{ steps.version.outputs.version }}-win-x64
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $assets = @(Get-ChildItem -LiteralPath dist -File | ForEach-Object { $_.FullName })
+          $releaseArgs = @('release', 'create', $env:RELEASE_TAG, '--verify-tag', '--generate-notes', '--title', "OllamaTextLens $env:RELEASE_TAG")
+          if ($env:RELEASE_VERSION.Contains('-')) { $releaseArgs += @('--prerelease', '--latest=false') }
+          & gh @releaseArgs @assets
+          if ($LASTEXITCODE -ne 0) { throw 'GitHub Release creation failed. Existing release assets are not overwritten.' }

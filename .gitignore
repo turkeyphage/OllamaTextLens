@@ -1,0 +1,27 @@
+bin/
+obj/
+publish/
+build-update/
+artifacts/
+dist/
+ollama-*.log
+.vs/
+
+# Local secrets and credentials
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pfx
+*.p12
+*.key
+*.pem
+.aws/
+.codex/
+
+# Local editor state and diagnostics
+.idea/
+*.user
+*.suo
+*.log
+*.dmp
