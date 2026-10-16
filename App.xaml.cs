@@ -32,6 +32,10 @@ public partial class App : Application
             IsExiting=true; Shutdown(); return;
         }
         base.OnStartup(e);
+        // The settings window constructs a hidden popup first; explicitly choose the lifetime owner.
+        var settingsWindow=new MainWindow();
+        MainWindow=settingsWindow;
+        settingsWindow.Show();
     }
 
     protected override void OnExit(ExitEventArgs e)

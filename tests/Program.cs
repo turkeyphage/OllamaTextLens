@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using OllamaTextLens;
+if(args.Length==2 && args[0]=="--app-lifetime") { AppLifetimeTests.Run(args[1]); return; }
 if(SingleInstanceTests.TryRunProbe(args)) return;
 SingleInstanceTests.Run();
 static void Check(bool condition,string name) { if(!condition) throw new Exception(name); Console.WriteLine("PASS "+name); }
