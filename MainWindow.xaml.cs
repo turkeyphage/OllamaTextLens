@@ -49,6 +49,7 @@ public partial class MainWindow : Window
             if(!hotkeyRegistered) SetStatus("HotkeyBusy");
         };
         Loaded+=async(_,_)=>await Refresh();
+        Closing+=(_,_)=>App.IsExiting=true;
         Closed+=(_,_)=> { pending?.Cancel(); if(source!=null) { Native.UnregisterHotKey(source.Handle,1); source.RemoveHook(Hook); } };
     }
     void ApplyLanguage()
@@ -113,9 +114,9 @@ public partial class MainWindow : Window
             if(text.Length>12000) throw new AppError("TextTooLong");
             text=Regex.Replace(text,@"(?<=\p{L})-\r?\n(?=\p{Ll})","");
             text=Regex.Replace(text,@"(?<!\n)\r?\n(?!\r?\n)"," ").Trim();
-            _=Translate(text,point);
+            if(!App.IsExiting) _=Translate(text,point);
         }
-        catch(Exception ex) { popup.Begin(point,"CaptureFailed",target:targetLanguage); popup.ShowError(ex); }
+        catch(Exception ex) { if(!App.IsExiting) { popup.Begin(point,"CaptureFailed",target:targetLanguage); popup.ShowError(ex); } }
         finally { capturing=false; }
     }
     async Task Translate(string text,Native.Point point)

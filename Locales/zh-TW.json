@@ -37,5 +37,6 @@
   "ChooseModel": "請先在主視窗選擇 Ollama 模型。",
   "ProviderFailed": "Ollama 回應錯誤，請確認模型已下載且支援聊天。",
   "StreamIncomplete": "連線提前中斷，結果可能不完整，請重試。",
-  "EmptyResponse": "模型未傳回文字，請嘗試其他聊天模型。"
+  "EmptyResponse": "模型未傳回文字，請嘗試其他聊天模型。",
+  "RestartFailed": "舊的 OllamaTextLens 尚未退出，或無法取得啟動鎖。請先關閉舊程式，再重新開啟。"
 }

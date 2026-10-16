@@ -3,6 +3,7 @@
   <ItemGroup>
     <Compile Include="../OllamaClient.cs" Link="OllamaClient.cs" />
     <Compile Include="../LanguageSupport.cs" Link="LanguageSupport.cs" />
+    <Compile Include="../SingleInstance.cs" Link="SingleInstance.cs" />
     <EmbeddedResource Include="../Locales/*.json" LogicalName="OllamaTextLens.Locales.%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

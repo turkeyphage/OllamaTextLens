@@ -41,6 +41,10 @@ Select a passage in your PDF reader and press **Ctrl + Alt + T**. The floating w
 
 Close the floating window, or press **Esc** while it has focus, to stop the request and hide it. Minimize the main window to keep the shortcut active. Closing the main window exits the app.
 
+Starting with v0.2.1, only one instance runs per Windows user and session. Opening OllamaTextLens again closes the previous instance before the new window opens, cancelling any active translation. Unsaved settings are discarded; saved settings are retained. If the previous instance cannot exit, the new launch stops and asks you to close it first.
+
+When upgrading from pre-0.2.1 releases, the app also closes matching older processes. A verified older release that remains in the background after its window closes is terminated so it cannot remain as a duplicate process.
+
 ## Languages
 
 The interface supports **Traditional Chinese, English, Japanese, Spanish, Korean, Vietnamese, Thai, and French**.
