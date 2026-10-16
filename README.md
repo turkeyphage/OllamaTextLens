@@ -71,3 +71,9 @@ dotnet run --project tests/Smoke.csproj -c Release
 ```
 
 Tests use simulated Ollama responses; no model is required. GitHub Actions builds and tests source changes, then creates a self-contained EXE, ZIP, and SHA256 checksums for version-tagged releases. Build outputs and local logs are excluded from Git.
+
+## License
+
+OllamaTextLens source code is licensed under the [MIT License](LICENSE).
+
+Third-party document content shown in screenshots remains the property of its respective copyright holders. Ollama and downloaded models have their own licenses.
