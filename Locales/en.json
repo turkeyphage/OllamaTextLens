@@ -37,5 +37,6 @@
   "ChooseModel": "Choose an Ollama model in the main window first.",
   "ProviderFailed": "Ollama returned an error. Check that the model is installed and supports chat.",
   "StreamIncomplete": "The connection ended early; the result may be incomplete. Please retry.",
-  "EmptyResponse": "The model returned no text. Try another chat model."
+  "EmptyResponse": "The model returned no text. Try another chat model.",
+  "RestartFailed": "The previous OllamaTextLens has not exited, or the startup lock is unavailable. Close the previous app, then try again."
 }

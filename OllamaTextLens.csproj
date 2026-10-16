@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>OllamaTextLens</AssemblyName>
+    <Version>0.2.1</Version>
     <RootNamespace>OllamaTextLens</RootNamespace>
     <Product>OllamaTextLens</Product>
     <Title>OllamaTextLens</Title>

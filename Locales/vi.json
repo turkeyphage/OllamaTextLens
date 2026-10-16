@@ -37,5 +37,6 @@
   "ChooseModel": "Hãy chọn mô hình Ollama trong cửa sổ chính trước.",
   "ProviderFailed": "Ollama báo lỗi. Kiểm tra mô hình đã cài và có hỗ trợ trò chuyện.",
   "StreamIncomplete": "Kết nối bị ngắt sớm, kết quả có thể chưa đầy đủ. Hãy thử lại.",
-  "EmptyResponse": "Mô hình không trả về văn bản. Hãy thử mô hình trò chuyện khác."
+  "EmptyResponse": "Mô hình không trả về văn bản. Hãy thử mô hình trò chuyện khác.",
+  "RestartFailed": "OllamaTextLens trước đó chưa thoát hoặc không lấy được khóa khởi động. Hãy đóng ứng dụng cũ rồi thử lại."
 }

@@ -37,5 +37,6 @@
   "ChooseModel": "Sélectionnez d’abord un modèle Ollama dans la fenêtre principale.",
   "ProviderFailed": "Ollama a renvoyé une erreur. Vérifiez que le modèle est installé et prend en charge le chat.",
   "StreamIncomplete": "La connexion s’est interrompue. Le résultat peut être incomplet. Veuillez réessayer.",
-  "EmptyResponse": "Le modèle n’a renvoyé aucun texte. Essayez un autre modèle de chat."
+  "EmptyResponse": "Le modèle n’a renvoyé aucun texte. Essayez un autre modèle de chat.",
+  "RestartFailed": "L’instance précédente d’OllamaTextLens ne s’est pas fermée ou le verrou de démarrage est indisponible. Fermez l’application précédente puis réessayez."
 }

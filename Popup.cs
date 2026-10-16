@@ -45,7 +45,7 @@ internal sealed class Popup : Window
         scroll.Content=sections;
         grid.Children.Add(header); Grid.SetRow(state,1); grid.Children.Add(state); Grid.SetRow(scroll,2); grid.Children.Add(scroll); Content=grid;
         PreviewKeyDown+=(_,e)=> { if(e.Key==Key.Escape) Dismiss(); };
-        Closing+=(_,e)=> { e.Cancel=true; Dismiss(); };
+        Closing+=(_,e)=> { if(!App.IsExiting) { e.Cancel=true; Dismiss(); } };
         SetLanguage(uiLanguage);
     }
     void Dismiss() { Hide(); Dismissed?.Invoke(); }
