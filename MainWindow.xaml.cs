@@ -9,6 +9,10 @@ public partial class MainWindow : Window
 {
     readonly Popup popup=new();
     readonly TrayIcon tray;
+    readonly System.Windows.Threading.DispatcherTimer healthTimer=new() { Interval=TimeSpan.FromSeconds(5) };
+    CancellationTokenSource? healthRequest;
+    string connectionKey="OllamaChecking";
+    string[]? runningModels;
     CancellationTokenSource? pending;
     bool capturing;
     HwndSource? source;
@@ -22,6 +26,14 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        Icon=System.Windows.Media.Imaging.BitmapFrame.Create(new Uri("pack://application:,,,/Assets/window.ico"));
+        // Fit content by default, but keep the entire window within the desktop work area.
+        var workArea=SystemParameters.WorkArea;
+        MinWidth=Math.Min(MinWidth,Math.Max(1,workArea.Width-24));
+        MinHeight=Math.Min(MinHeight,Math.Max(1,workArea.Height-24));
+        MaxWidth=Math.Max(MinWidth,workArea.Width-24);
+        MaxHeight=Math.Max(MinHeight,workArea.Height-24);
+        Width=Math.Min(Width,MaxWidth);
         try
         {
             var loadPath=File.Exists(settingsPath)?settingsPath:Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"LocalPdfTranslator","settings.json");
@@ -44,6 +56,13 @@ public partial class MainWindow : Window
         tray=new TrayIcon(ShowSettings,()=> { App.IsExiting=true; Application.Current.Shutdown(); });
         languagesReady=true;
         ApplyLanguage();
+        healthTimer.Tick+=async(_,_)=>await CheckConnection();
+        Endpoint.TextChanged+=async(_,_)=> { if(languagesReady) { CancelHealthCheck(); if(IsVisible) await CheckConnection(); } };
+        Models.AddHandler(System.Windows.Controls.Primitives.TextBoxBase.TextChangedEvent,new System.Windows.Controls.TextChangedEventHandler((_,_)=>RenderConnection()));
+        IsVisibleChanged+=async(_,_)=> {
+            if(IsVisible) { healthTimer.Start(); await CheckConnection(); }
+            else { healthTimer.Stop(); CancelHealthCheck(); }
+        };
         popup.Dismissed+=()=>pending?.Cancel();
         SourceInitialized+=(_,_)=> {
             source=HwndSource.FromHwnd(new WindowInteropHelper(this).Handle); source.AddHook(Hook);
@@ -55,7 +74,7 @@ public partial class MainWindow : Window
             if(App.IsExiting) return;
             e.Cancel=true; Hide();
         };
-        Closed+=(_,_)=> { tray.Dispose(); pending?.Cancel(); if(source!=null) { Native.UnregisterHotKey(source.Handle,1); source.RemoveHook(Hook); } };
+        Closed+=(_,_)=> { healthTimer.Stop(); CancelHealthCheck(); tray.Dispose(); pending?.Cancel(); if(source!=null) { Native.UnregisterHotKey(source.Handle,1); source.RemoveHook(Hook); } };
     }
     void ShowSettings()
     {
@@ -72,7 +91,48 @@ public partial class MainWindow : Window
         Status.Text=T(statusKey)+(statusDetail.Length==0?"":" "+statusDetail);
         popup.SetLanguage(uiLanguage);
         tray.SetLanguage(uiLanguage);
+        RenderConnection();
         Language=System.Windows.Markup.XmlLanguage.GetLanguage(uiLanguage);
+    }
+    void CancelHealthCheck()
+    {
+        healthRequest?.Cancel();
+        healthRequest=null;
+        runningModels=null;
+        connectionKey="OllamaChecking";
+        RenderConnection();
+    }
+    void RenderConnection()
+    {
+        ConnectionStatus.Text=I18n.Text(uiLanguage,connectionKey);
+        ConnectionStatus.Foreground=connectionKey=="OllamaConnected"?System.Windows.Media.Brushes.ForestGreen:
+            connectionKey=="OllamaChecking"?System.Windows.Media.Brushes.DarkGoldenrod:System.Windows.Media.Brushes.Firebrick;
+        var loaded=runningModels==null?I18n.Text(uiLanguage,"OllamaUnknown"):
+            runningModels.Length==0?I18n.Text(uiLanguage,"OllamaIdle"):string.Join(", ",runningModels);
+        RunningModelStatus.Text=I18n.Text(uiLanguage,"OllamaRunningModels",loaded);
+        SelectedModelStatus.Text=I18n.Text(uiLanguage,"OllamaSelectedModel",string.IsNullOrWhiteSpace(Models.Text)?I18n.Text(uiLanguage,"OllamaNotSelected"):Models.Text.Trim());
+    }
+    async Task CheckConnection()
+    {
+        if(healthRequest!=null || App.IsExiting || !IsVisible) return;
+        var current=new CancellationTokenSource();
+        healthRequest=current;
+        var address=Endpoint.Text;
+        try
+        {
+            var endpoint=OllamaClient.Validate(address);
+            var loaded=await OllamaClient.RunningModels(endpoint,current.Token);
+            if(healthRequest!=current || Endpoint.Text!=address) return;
+            runningModels=loaded; connectionKey="OllamaConnected";
+        }
+        catch(OperationCanceledException) when(current.IsCancellationRequested) { return; }
+        catch(AppError e) when(e.Key=="InvalidEndpoint") { if(healthRequest==current) { runningModels=null; connectionKey="InvalidEndpoint"; } }
+        catch(Exception) { if(healthRequest==current) { runningModels=null; connectionKey="OllamaDisconnected"; } }
+        finally
+        {
+            if(healthRequest==current) { healthRequest=null; RenderConnection(); }
+            current.Dispose();
+        }
     }
     void SetStatus(string key,string detail="") { statusKey=key; statusDetail=detail; Status.Text=I18n.Text(uiLanguage,key)+(detail.Length==0?"":" "+detail); }
     void Language_Changed(object sender,System.Windows.Controls.SelectionChangedEventArgs e)
@@ -153,6 +213,8 @@ public partial class MainWindow : Window
     }
     async Task Refresh()
     {
+        CancelHealthCheck();
+        _=CheckConnection();
         try { var names=await OllamaClient.Models(OllamaClient.Validate(Endpoint.Text)); var selected=Models.Text; Models.ItemsSource=names; Models.Text=names.Contains(selected)?selected:names.FirstOrDefault()??""; SetStatus(!hotkeyRegistered?"HotkeyBusy":names.Length==0?"NoModels":"ModelsLoaded"); }
         catch(Exception ex) { SetStatus("ModelsFailed",I18n.Error(uiLanguage,ex)); }
     }

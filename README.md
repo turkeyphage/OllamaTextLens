@@ -1,12 +1,16 @@
 # OllamaTextLens
 
+<img src="Assets/logo.png" alt="OllamaTextLens yellow translation logo" width="96">
+
 Select text, press **Ctrl + Alt + T**, and read the translation and a short explanation beside your pointer. OllamaTextLens is a Windows desktop app powered by local Ollama models, designed for reading PDFs with selectable text.
 
 ## Features
 
 - Floating window with separate sections for the original text, translation, and explanation.
+- Highlight-yellow app branding, with a separate simplified system tray icon and multi-size window icons.
 - Streaming responses and concise explanations in one or two sentences.
 - Independent settings for interface language and translation language.
+- Live Ollama connection status and loaded models, refreshed every five seconds while settings are visible. The selected translation model is displayed separately; an idle server with no loaded models still shows as connected.
 - Local Ollama connection, with no reading history saved by the app.
 
 ## Screenshots
@@ -73,6 +77,8 @@ dotnet build OllamaTextLens.csproj -c Release
 dotnet run --project OllamaTextLens.csproj
 dotnet run --project tests/Smoke.csproj -c Release
 ```
+
+For local preview builds, run `./scripts/build-test.ps1`. It always writes to `artifacts/test`; exit the running app from its tray menu before rebuilding. Keep the generated files together when running `artifacts/test/OllamaTextLens.exe`.
 
 Tests use simulated Ollama responses; no model is required. GitHub Actions builds and tests source changes, then creates a self-contained EXE, ZIP, and SHA256 checksums for version-tagged releases. Build outputs and local logs are excluded from Git.
 

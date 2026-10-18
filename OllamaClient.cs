@@ -19,6 +19,17 @@ internal static class OllamaClient
         using var json=JsonDocument.Parse(await response.Content.ReadAsStringAsync(timeout.Token));
         return json.RootElement.GetProperty("models").EnumerateArray().Select(m=>m.GetProperty("name").GetString()!).ToArray();
     }
+    internal static async Task<string[]> RunningModels(Uri endpoint,CancellationToken token)
+    {
+        using var timeout=CancellationTokenSource.CreateLinkedTokenSource(token);
+        timeout.CancelAfter(TimeSpan.FromSeconds(4));
+        using var response=await Client.GetAsync(new Uri(endpoint,"api/ps"),timeout.Token);
+        response.EnsureSuccessStatusCode();
+        using var json=JsonDocument.Parse(await response.Content.ReadAsStringAsync(timeout.Token));
+        return json.RootElement.GetProperty("models").EnumerateArray()
+            .Select(m=>m.GetProperty("name").GetString()).Where(n=>!string.IsNullOrWhiteSpace(n))
+            .Select(n=>n!).Distinct().ToArray();
+    }
     internal static async Task Translate(Uri endpoint,string model,string text,string target,Action<string> update,CancellationToken token)
     {
         var payload=new { model, stream=true, think=false, messages=new[] {

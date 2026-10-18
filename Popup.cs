@@ -21,6 +21,7 @@ internal sealed class Popup : Window
     internal event Action? Dismissed;
     internal Popup()
     {
+        Icon=System.Windows.Media.Imaging.BitmapFrame.Create(new Uri("pack://application:,,,/Assets/window.ico"));
         Title="翻譯與白話解釋"; Width=500; Height=560; MinWidth=320; MinHeight=220; Topmost=true; ShowInTaskbar=false; ShowActivated=false;
         FontFamily=new FontFamily("Segoe UI, Microsoft JhengHei UI"); Background=new SolidColorBrush(Color.FromRgb(250,252,255));
         var grid=new Grid { Margin=new Thickness(18) };

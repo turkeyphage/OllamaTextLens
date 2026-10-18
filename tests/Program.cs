@@ -33,6 +33,24 @@ foreach(var invalid in new[]{"https://example.com","http://example.com","http://
 }
 OllamaClient.Client.Dispose(); OllamaClient.Client=new HttpClient(new FakeHandler());
 var endpoint=OllamaClient.Validate("http://127.0.0.1:11434");
+using(var healthClient=new HttpClient(new HealthHandler()))
+{
+    var original=OllamaClient.Client;
+    OllamaClient.Client=healthClient;
+    try
+    {
+        Check((await OllamaClient.RunningModels(endpoint,CancellationToken.None)).SequenceEqual(new[]{"qwen3.5:9b","other:7b"}),"health check reads loaded models from api/ps and removes duplicates");
+        Check((await OllamaClient.RunningModels(endpoint,CancellationToken.None)).Length==0,"connected idle Ollama has no loaded models");
+        bool offline=false;
+        try { await OllamaClient.RunningModels(endpoint,CancellationToken.None); } catch(HttpRequestException) { offline=true; }
+        Check(offline,"failed health request is not treated as connected");
+        using var cancel=new CancellationTokenSource(); cancel.Cancel();
+        bool cancelled=false;
+        try { await OllamaClient.RunningModels(endpoint,cancel.Token); } catch(OperationCanceledException) { cancelled=true; }
+        Check(cancelled,"health check cancellation prevents stale endpoint results");
+    }
+    finally { OllamaClient.Client=original; }
+}
 Check((await OllamaClient.Models(endpoint)).SequenceEqual(new[]{"test-model"}),"model discovery");
 string result="";
 await OllamaClient.Translate(endpoint,"test-model","Example","ja",s=>result=s,CancellationToken.None);
@@ -62,5 +80,19 @@ sealed class FakeHandler : HttpMessageHandler
             body=++calls==1?"{\"message\":{\"content\":\"翻譯\"},\"done\":false}\n{\"message\":{\"content\":\"完成\"},\"done\":true}\n":"{\"message\":{\"content\":\"partial\"},\"done\":false}\n";
         }
         return new HttpResponseMessage(HttpStatusCode.OK) { Content=new StringContent(body,Encoding.UTF8,"application/json") };
+    }
+}
+sealed class HealthHandler : HttpMessageHandler
+{
+    int calls;
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        if(request.Method!=HttpMethod.Get || request.RequestUri!.AbsolutePath!="/api/ps") throw new Exception("Health check must use api/ps, not the installed model list.");
+        calls++;
+        var response=calls==3?new HttpResponseMessage(HttpStatusCode.ServiceUnavailable):
+            new HttpResponseMessage(HttpStatusCode.OK) { Content=new StringContent(calls==1?
+                "{\"models\":[{\"name\":\"qwen3.5:9b\"},{\"name\":\"other:7b\"},{\"name\":\"qwen3.5:9b\"}]}":"{\"models\":[]}",Encoding.UTF8,"application/json") };
+        return Task.FromResult(response);
     }
 }

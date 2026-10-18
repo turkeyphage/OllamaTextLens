@@ -88,7 +88,15 @@ internal sealed class SingleInstance : IDisposable
                     if (!process.WaitForExit(remaining)) return false;
                 }
                 catch (InvalidOperationException) { /* Process exited between enumeration and inspection. */ }
-                catch (System.ComponentModel.Win32Exception) { return false; }
+                catch (System.ComponentModel.Win32Exception)
+                {
+                    // The previous owner releases its mutex before Windows finishes tearing
+                    // down its modules. Reading its metadata can fail during that brief gap.
+                    try { if(process.WaitForExit(500)) continue; }
+                    catch(InvalidOperationException) { continue; }
+                    catch(System.ComponentModel.Win32Exception) { }
+                    return false;
+                }
             }
         }
         return true;

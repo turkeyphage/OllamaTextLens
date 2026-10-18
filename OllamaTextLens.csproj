@@ -4,10 +4,11 @@
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>Assets/app.ico</ApplicationIcon>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>OllamaTextLens</AssemblyName>
-    <Version>0.2.3</Version>
+    <Version>0.2.4</Version>
     <RootNamespace>OllamaTextLens</RootNamespace>
     <Product>OllamaTextLens</Product>
     <Title>OllamaTextLens</Title>
@@ -15,4 +16,5 @@
   </PropertyGroup>
   <ItemGroup><Compile Remove="tests/**/*.cs" /><Using Remove="System.Windows.Forms" /><Using Remove="System.Drawing" /></ItemGroup>
   <ItemGroup><EmbeddedResource Include="Locales/*.json" /></ItemGroup>
+  <ItemGroup><Resource Include="Assets/logo.png" /><Resource Include="Assets/app.ico" /><Resource Include="Assets/window.ico" /><Resource Include="Assets/tray.ico" /></ItemGroup>
 </Project>

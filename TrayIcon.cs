@@ -5,6 +5,7 @@ namespace OllamaTextLens;
 internal sealed class TrayIcon : IDisposable
 {
     readonly Forms.NotifyIcon icon;
+    readonly System.Drawing.Icon appIcon;
     readonly Forms.ToolStripMenuItem open = new();
     readonly Forms.ToolStripMenuItem exit = new();
     readonly Forms.ContextMenuStrip menu = new();
@@ -16,9 +17,12 @@ internal sealed class TrayIcon : IDisposable
         menu.Items.Add(open);
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add(exit);
+        using(var stream=System.Windows.Application.GetResourceStream(new Uri("pack://application:,,,/Assets/tray.ico")).Stream)
+        using(var loaded=new System.Drawing.Icon(stream,Forms.SystemInformation.SmallIconSize))
+            appIcon=(System.Drawing.Icon)loaded.Clone();
         icon = new Forms.NotifyIcon {
             Text = "OllamaTextLens",
-            Icon = System.Drawing.SystemIcons.Application,
+            Icon = appIcon,
             ContextMenuStrip = menu,
             Visible = true
         };
@@ -35,6 +39,7 @@ internal sealed class TrayIcon : IDisposable
     {
         icon.Visible = false;
         icon.Dispose();
+        appIcon.Dispose();
         menu.Dispose();
     }
 }
