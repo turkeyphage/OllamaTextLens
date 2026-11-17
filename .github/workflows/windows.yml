@@ -56,7 +56,9 @@ jobs:
           if ($env:REF_TYPE -eq 'tag') {
             $version = $env:REF_NAME -replace '^v', ''
           } else {
-            $version = "0.0.0-dev.$env:GITHUB_RUN_NUMBER"
+            [xml]$project = Get-Content -LiteralPath OllamaTextLens.csproj -Raw
+            $coreVersion = ([string]$project.Project.PropertyGroup.Version -split '-', 2)[0]
+            $version = "$coreVersion-dev.$env:GITHUB_RUN_NUMBER"
           }
           "version=$version" >> $env:GITHUB_OUTPUT
       - name: Publish single-file EXE and ZIP
