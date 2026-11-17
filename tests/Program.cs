@@ -3,8 +3,10 @@ using System.Text;
 using System.Text.Json;
 using OllamaTextLens;
 if(args.Length==2 && args[0]=="--app-lifetime") { AppLifetimeTests.Run(args[1]); return; }
+if(args.Length==2 && args[0]=="--speech-live") { await SpeechTests.RunLive(args[1]); return; }
 if(SingleInstanceTests.TryRunProbe(args)) return;
 SingleInstanceTests.Run();
+await SpeechTests.Run();
 static void Check(bool condition,string name) { if(!condition) throw new Exception(name); Console.WriteLine("PASS "+name); }
 Check(Languages.Interface.Select(x=>x.Id).SequenceEqual(new[]{"zh-TW","en","ja","es","ko","vi","th","fr"}),"requested eight interface languages");
 var englishKeys=I18n.Bundle("en").Keys.Order().ToArray();

@@ -8,7 +8,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>OllamaTextLens</AssemblyName>
-    <Version>0.2.4</Version>
+    <Version>0.2.5-tts-preview.1</Version>
     <RootNamespace>OllamaTextLens</RootNamespace>
     <Product>OllamaTextLens</Product>
     <Title>OllamaTextLens</Title>
@@ -16,5 +16,9 @@
   </PropertyGroup>
   <ItemGroup><Compile Remove="tests/**/*.cs" /><Using Remove="System.Windows.Forms" /><Using Remove="System.Drawing" /></ItemGroup>
   <ItemGroup><EmbeddedResource Include="Locales/*.json" /></ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="org.k2fsa.sherpa.onnx" Version="1.12.17" />
+    <PackageReference Include="NAudio" Version="2.2.1" />
+  </ItemGroup>
   <ItemGroup><Resource Include="Assets/logo.png" /><Resource Include="Assets/app.ico" /><Resource Include="Assets/window.ico" /><Resource Include="Assets/tray.ico" /></ItemGroup>
 </Project>

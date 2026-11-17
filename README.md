@@ -9,6 +9,7 @@ Select text, press **Ctrl + Alt + T**, and read the translation and a short expl
 - Floating window with separate sections for the original text, translation, and explanation.
 - Highlight-yellow app branding, with a separate simplified system tray icon and multi-size window icons.
 - Streaming responses and concise explanations in one or two sentences.
+- Offline English read-aloud with Kokoro: play, pause/resume, stop, and 0.75–2× reading speed. Available in the local speech preview build.
 - Independent settings for interface language and translation language.
 - Live Ollama connection status and loaded models, refreshed every five seconds while settings are visible. The selected translation model is displayed separately; an idle server with no loaded models still shows as connected.
 - Local Ollama connection, with no reading history saved by the app.
@@ -48,6 +49,14 @@ Close the floating window, or press **Esc** while it has focus, to stop the requ
 Starting with v0.2.1, only one instance runs per Windows user and session. Opening OllamaTextLens again closes the previous instance before the new window opens, cancelling any active translation. Unsaved settings are discarded; saved settings are retained. If the previous instance cannot exit, the new launch stops and asks you to close it first.
 
 When upgrading from pre-0.2.1 releases, the app also closes matching older processes. A verified older release that remains in the background after its window closes is terminated so it cannot remain as a duplicate process.
+
+## Local English speech (preview)
+
+Settings checks whether the speech model is installed and complete. If it is missing or incomplete, read-aloud controls and **Test English voice** are disabled; choose **Download speech model** in settings to install it explicitly. You can cancel the download. Once ready, select **Test English voice** to open a sample without Ollama, or select PDF text as usual. Beside **Original**, use **Read aloud**, **Pause / Resume**, and **Stop**. Choose Heart (female, US English) or Michael (male, US English). Voice and speed selections apply to the next playback; both voices share the same downloaded model. Closing the translation popup or selecting a new passage stops its audio.
+
+Speech runs on the CPU using Kokoro v1.0 (quantized) with American English **Heart** (female) and **Michael** (male) voices. When you choose Download speech model, the app downloads a pinned model archive (about 126 MiB) from the official sherpa-onnx release and verifies its SHA256 checksum. Later playback is offline: no subscription, API key, usage charges, or text upload. The model is cached under `%LOCALAPPDATA%\OllamaTextLens\speech` and is separate from Ollama models. Model initialization and speech generation may take a few seconds; hardware affects latency. This preview supports English originals, independently of interface and translation languages.
+
+Speech dependencies retain their own licenses; see [third-party notices](THIRD-PARTY-NOTICES.md). The model archive and its data are retained with their upstream license files.
 
 ## Languages
 

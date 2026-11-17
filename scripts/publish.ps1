@@ -34,12 +34,13 @@ $exe = Join-Path $publishDir 'OllamaTextLens.exe'
 if (-not (Test-Path -LiteralPath $exe)) { throw 'Expected EXE was not produced.' }
 Copy-Item -LiteralPath (Join-Path $projectRoot 'README.md') -Destination $publishDir -Force
 Copy-Item -LiteralPath (Join-Path $projectRoot 'LICENSE') -Destination $publishDir -Force
+Copy-Item -LiteralPath (Join-Path $projectRoot 'THIRD-PARTY-NOTICES.md') -Destination $publishDir -Force
 Copy-Item -LiteralPath (Join-Path $projectRoot 'docs') -Destination $publishDir -Recurse -Force
 Copy-Item -LiteralPath (Join-Path $projectRoot 'Assets') -Destination $publishDir -Recurse -Force
 $exeAsset = Join-Path $distDir "$packageName.exe"
 $zipAsset = Join-Path $distDir "$packageName.zip"
 Copy-Item -LiteralPath $exe -Destination $exeAsset -Force
-Compress-Archive -LiteralPath $exe, (Join-Path $publishDir 'README.md'), (Join-Path $publishDir 'LICENSE'), (Join-Path $publishDir 'docs'), (Join-Path $publishDir 'Assets') -DestinationPath $zipAsset -Force
+Compress-Archive -LiteralPath $exe, (Join-Path $publishDir 'README.md'), (Join-Path $publishDir 'LICENSE'), (Join-Path $publishDir 'THIRD-PARTY-NOTICES.md'), (Join-Path $publishDir 'docs'), (Join-Path $publishDir 'Assets') -DestinationPath $zipAsset -Force
 $checksums = foreach ($asset in @($exeAsset, $zipAsset)) {
     $hash = (Get-FileHash -LiteralPath $asset -Algorithm SHA256).Hash.ToLowerInvariant()
     "$hash  $(Split-Path -Leaf $asset)"

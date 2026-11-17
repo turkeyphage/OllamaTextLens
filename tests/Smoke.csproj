@@ -4,6 +4,11 @@
     <Compile Include="../OllamaClient.cs" Link="OllamaClient.cs" />
     <Compile Include="../LanguageSupport.cs" Link="LanguageSupport.cs" />
     <Compile Include="../SingleInstance.cs" Link="SingleInstance.cs" />
+    <Compile Include="../SpeechService.cs" Link="SpeechService.cs" />
+    <Compile Include="../SpeechModel.cs" Link="SpeechModel.cs" />
+    <Compile Include="../SpeechOutput.cs" Link="SpeechOutput.cs" />
+    <PackageReference Include="org.k2fsa.sherpa.onnx" Version="1.12.17" />
+    <PackageReference Include="NAudio" Version="2.2.1" />
     <EmbeddedResource Include="../Locales/*.json" LogicalName="OllamaTextLens.Locales.%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

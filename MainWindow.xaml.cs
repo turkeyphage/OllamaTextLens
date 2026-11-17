@@ -11,6 +11,9 @@ public partial class MainWindow : Window
     readonly TrayIcon tray;
     readonly System.Windows.Threading.DispatcherTimer healthTimer=new() { Interval=TimeSpan.FromSeconds(5) };
     CancellationTokenSource? healthRequest;
+    CancellationTokenSource? speechInstall;
+    int speechDownloadProgress;
+    Exception? speechInstallError;
     string connectionKey="OllamaChecking";
     string[]? runningModels;
     CancellationTokenSource? pending;
@@ -56,11 +59,11 @@ public partial class MainWindow : Window
         tray=new TrayIcon(ShowSettings,()=> { App.IsExiting=true; Application.Current.Shutdown(); });
         languagesReady=true;
         ApplyLanguage();
-        healthTimer.Tick+=async(_,_)=>await CheckConnection();
+        healthTimer.Tick+=async(_,_)=> { RefreshSpeechAvailability(); await CheckConnection(); };
         Endpoint.TextChanged+=async(_,_)=> { if(languagesReady) { CancelHealthCheck(); if(IsVisible) await CheckConnection(); } };
         Models.AddHandler(System.Windows.Controls.Primitives.TextBoxBase.TextChangedEvent,new System.Windows.Controls.TextChangedEventHandler((_,_)=>RenderConnection()));
         IsVisibleChanged+=async(_,_)=> {
-            if(IsVisible) { healthTimer.Start(); await CheckConnection(); }
+            if(IsVisible) { healthTimer.Start(); RefreshSpeechAvailability(); await CheckConnection(); }
             else { healthTimer.Stop(); CancelHealthCheck(); }
         };
         popup.Dismissed+=()=>pending?.Cancel();
@@ -74,7 +77,7 @@ public partial class MainWindow : Window
             if(App.IsExiting) return;
             e.Cancel=true; Hide();
         };
-        Closed+=(_,_)=> { healthTimer.Stop(); CancelHealthCheck(); tray.Dispose(); pending?.Cancel(); if(source!=null) { Native.UnregisterHotKey(source.Handle,1); source.RemoveHook(Hook); } };
+        Closed+=(_,_)=> { speechInstall?.Cancel(); healthTimer.Stop(); CancelHealthCheck(); tray.Dispose(); pending?.Cancel(); if(source!=null) { Native.UnregisterHotKey(source.Handle,1); source.RemoveHook(Hook); } };
     }
     void ShowSettings()
     {
@@ -88,6 +91,8 @@ public partial class MainWindow : Window
         HelpLabel.Text=T("Help"); InterfaceLabel.Text=T("Interface"); TargetLabel.Text=T("Target");
         EndpointLabel.Text=T("Endpoint"); ModelLabel.Text=T("Model"); PrivacyLabel.Text=T("Privacy");
         RefreshButton.Content=T("Refresh"); SaveButton.Content=T("Save"); TestButton.Content=T("Test");
+        SpeechTestButton.Content=T("SpeechTest");
+        RefreshSpeechAvailability();
         Status.Text=T(statusKey)+(statusDetail.Length==0?"":" "+statusDetail);
         popup.SetLanguage(uiLanguage);
         tray.SetLanguage(uiLanguage);
@@ -224,4 +229,43 @@ public partial class MainWindow : Window
         try { OllamaClient.Validate(Endpoint.Text); Directory.CreateDirectory(Path.GetDirectoryName(settingsPath)!); File.WriteAllText(settingsPath,JsonSerializer.Serialize(new UserSettings(Endpoint.Text,Models.Text,uiLanguage,targetLanguage))); SetStatus("Saved"); } catch(Exception ex) { SetStatus("SettingsFailed",I18n.Error(uiLanguage,ex)); }
     }
     async void Test_Click(object sender,RoutedEventArgs e) { Native.GetCursorPos(out var point); await Translate("The results suggest a strong correlation, but correlation does not imply causation.",point); }
+    void SpeechTest_Click(object sender,RoutedEventArgs e)
+    {
+        RefreshSpeechAvailability();
+        if(!SpeechTestButton.IsEnabled) return;
+        pending?.Cancel(); pending=null;
+        Native.GetCursorPos(out var point);
+        popup.Begin(point,"SpeechDemo","Welcome to OllamaTextLens. Select a passage and listen to the original English text, spoken naturally on your own computer. You can pause, continue, stop, or choose a different reading speed.",targetLanguage);
+    }
+    void RefreshSpeechAvailability()
+    {
+        var state=SpeechModel.Inspect(SpeechModel.DirectoryPath);
+        bool ready=state==SpeechModelState.Ready;
+        SpeechTestButton.IsEnabled=ready && speechInstall==null;
+        InstallSpeechButton.IsEnabled=!ready || speechInstall!=null;
+        InstallSpeechButton.Content=I18n.Text(uiLanguage,speechInstall!=null?"SpeechCancelDownload":"SpeechInstall");
+        string key=ready?"SpeechModelInstalled":state==SpeechModelState.Missing?"SpeechModelNotInstalled":"SpeechModelIncomplete";
+        SpeechModelStatus.Text=speechInstall!=null?I18n.Text(uiLanguage,"SpeechDownloading",speechDownloadProgress):
+            speechInstallError!=null && !ready?I18n.Text(uiLanguage,"SpeechInstallFailed")+" "+I18n.Text(uiLanguage,"SpeechRetry"):
+            I18n.Text(uiLanguage,key);
+        SpeechModelStatus.Foreground=ready?System.Windows.Media.Brushes.ForestGreen:System.Windows.Media.Brushes.DarkGoldenrod;
+        SpeechTestButton.ToolTip=ready?null:I18n.Text(uiLanguage,"SpeechModelMissing");
+    }
+    async void InstallSpeech_Click(object sender,RoutedEventArgs e)
+    {
+        if(speechInstall!=null) { speechInstall.Cancel(); return; }
+        var request=new CancellationTokenSource(); speechInstall=request;
+        speechInstallError=null; speechDownloadProgress=0; RefreshSpeechAvailability();
+        try
+        {
+            var progress=new Progress<int>(percent=> {
+                if(speechInstall!=request || App.IsExiting) return;
+                speechDownloadProgress=percent; RefreshSpeechAvailability();
+            });
+            await SpeechModel.EnsureAsync(progress,request.Token);
+        }
+        catch(OperationCanceledException) when(request.IsCancellationRequested) { }
+        catch(Exception error) { speechInstallError=error; }
+        finally { speechInstall=null; request.Dispose(); if(!App.IsExiting) RefreshSpeechAvailability(); }
+    }
 }
