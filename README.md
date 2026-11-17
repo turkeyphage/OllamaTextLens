@@ -9,7 +9,7 @@ Select text, press **Ctrl + Alt + T**, and read the translation and a short expl
 - Floating window with separate sections for the original text, translation, and explanation.
 - Highlight-yellow app branding, with a separate simplified system tray icon and multi-size window icons.
 - Streaming responses and concise explanations in one or two sentences.
-- Offline English read-aloud with Kokoro: play, pause/resume, stop, and 0.75–2× reading speed. Available in the local speech preview build.
+- Offline English, Spanish and Japanese read-aloud with Kokoro: local language detection, manual language selection, male/female voices, play, pause/resume, stop, and 0.75–2× reading speed. Available in v0.2.5 and later.
 - Independent settings for interface language and translation language.
 - Live Ollama connection status and loaded models, refreshed every five seconds while settings are visible. The selected translation model is displayed separately; an idle server with no loaded models still shows as connected.
 - Local Ollama connection, with no reading history saved by the app.
@@ -50,11 +50,17 @@ Starting with v0.2.1, only one instance runs per Windows user and session. Openi
 
 When upgrading from pre-0.2.1 releases, the app also closes matching older processes. A verified older release that remains in the background after its window closes is terminated so it cannot remain as a duplicate process.
 
-## Local English speech (preview)
+## Local English, Spanish and Japanese speech
 
-Settings checks whether the speech model is installed and complete. If it is missing or incomplete, read-aloud controls and **Test English voice** are disabled; choose **Download speech model** in settings to install it explicitly. You can cancel the download. Once ready, select **Test English voice** to open a sample without Ollama, or select PDF text as usual. Beside **Original**, use **Read aloud**, **Pause / Resume**, and **Stop**. Choose Heart (female, US English) or Michael (male, US English). Voice and speed selections apply to the next playback; both voices share the same downloaded model. Closing the translation popup or selecting a new passage stops its audio.
+Settings checks whether the speech model is installed and complete. If it is missing or incomplete, read-aloud controls and voice tests are disabled; choose **Download speech model** to install it explicitly. You can cancel the download. Once ready, use **Test English voice** or **Test Spanish voice** without Ollama, or select PDF text as usual. Beside **Original**, use **Read aloud**, **Pause / Resume**, and **Stop**. English voices are Heart (female) and Michael (male); Spanish voices are Dora (female) and Alex (male). Voice and speed changes apply to the next playback. All six voices share the same downloaded model. Closing the popup or selecting a new passage stops audio.
 
-Speech runs on the CPU using Kokoro v1.0 (quantized) with American English **Heart** (female) and **Michael** (male) voices. When you choose Download speech model, the app downloads a pinned model archive (about 126 MiB) from the official sherpa-onnx release and verifies its SHA256 checksum. Later playback is offline: no subscription, API key, usage charges, or text upload. The model is cached under `%LOCALAPPDATA%\OllamaTextLens\speech` and is separate from Ollama models. Model initialization and speech generation may take a few seconds; hardware affects latency. This preview supports English originals, independently of interface and translation languages.
+**Source language** defaults to **Auto detect**. NTextCat identifies the language entirely on the device, then the app selects the corresponding Kokoro pronunciation frontend and voices. You can override it with **English** or **Español**, independently of interface and translation languages. Short selections, uncertain results, and unsupported languages require a manual choice. Detection can still be wrong, especially with mixed languages; this preview reads each selection in one language.
+
+Japanese is also available with **日本語**, **Alpha** (female) and **Kumo** (male). Text containing Japanese kana is detected locally; kanji-only fragments require a manual choice to avoid confusing them with Chinese. Settings includes **Test Japanese voice** without an Ollama connection. Stop cancels generation; restarting launches the helper again when needed. All three languages retain pause/resume and speed selection.
+
+Keep the entire `speech-ja` folder beside the EXE. This packaged Japanese component includes its own runtime and pronunciation dictionary, so Python does not need to be installed on the computer running the app. If it is missing, Japanese playback is disabled with an explanation; English and Spanish remain available. It reuses the installed Kokoro model and never downloads anything during playback. Build the helper with `./scripts/build-japanese-speech.ps1` using the environment prepared by `./scripts/test-kokoro-japanese.ps1`, then build the app normally. The test build preserves this folder. Japanese runs as a local helper process and closes with the app; source text and generated audio are passed through private pipes rather than saved to disk.
+
+Speech runs on the CPU using quantized Kokoro v1.0. Downloading the speech model retrieves a pinned archive (about 126 MiB) from the official sherpa-onnx release and verifies its SHA256. Later playback and language identification are offline: no subscription, API key, usage charges, or text upload. The speech model is cached under `%LOCALAPPDATA%\OllamaTextLens\speech`, separate from Ollama models. Initialization and generation may take a few seconds; hardware affects latency.
 
 Speech dependencies retain their own licenses; see [third-party notices](THIRD-PARTY-NOTICES.md). The model archive and its data are retained with their upstream license files.
 
@@ -76,6 +82,8 @@ Both settings default to Traditional Chinese. Existing model and connection sett
 - Run the PDF reader and OllamaTextLens at the same privilege level. Text order in multi-column PDFs depends on the reader.
 - Selections are limited to 12,000 characters. Initial model loading can be slow; requests time out after five minutes.
 - Settings are stored in `%LOCALAPPDATA%\OllamaTextLens\settings.json`.
+
+Download the full release ZIP for Japanese support; the separate EXE needs the accompanying `speech-ja` folder for Japanese.
 
 ## Development
 

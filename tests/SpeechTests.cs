@@ -13,6 +13,13 @@ internal static class SpeechTests
     }
     internal static async Task Run()
     {
+        Check(SpeechLanguage.Detect("Select a passage and listen to the original English text, spoken naturally on your own computer.")=="en","offline detection identifies English");
+        foreach(var text in new[]{"こんにちは。これは日本語の読み上げテストです。","今日は晴れです。","カタカナ","ひらがな"})
+            Check(SpeechLanguage.Detect(text)=="ja","offline detection identifies Japanese kana: "+text);
+        Check(SpeechLanguage.Detect("日本語")==null,"kanji-only fragment needs a manual language choice");
+        Check(SpeechLanguage.Detect("Hola, esta es una prueba de lectura en español. Selecciona un fragmento de texto y escucha su pronunciación natural.")=="es","offline detection identifies Spanish");
+        foreach(var text in new[]{"Hola","Hello","12345","Bonjour, cette application permet de lire un texte en français.","這是一段中文測試文章，不應該以英文方式朗讀。"})
+            Check(SpeechLanguage.Detect(text)==null,"uncertain or unsupported text needs manual choice: "+text);
         await CheckModelAvailability();
         Check(SpeechText.Normalize("An inter-\nnational study.\r\nNext line.")=="An international study. Next line.","speech repairs PDF line breaks without rewriting the source");
         var longText=string.Join(" ",Enumerable.Repeat("This paragraph keeps its punctuation, dates, and original wording.",30));
@@ -37,6 +44,26 @@ internal static class SpeechTests
         speech.Stop(); await Task.WhenAll(old,latest).WaitAsync(TimeSpan.FromSeconds(5));
         Check(voice.MaxConcurrent==1,"replacement selection never synthesizes two voices concurrently");
         Check(voice.Speaker==16,"male voice selection reaches the speech model");
+        var spanish=speech.PlayAsync("Hola",1f,29,"es");
+        await Until(()=>voice.LastText=="Hola" && speech.Status.Phase==SpeechPhase.Playing);
+        Check(voice.Language=="es" && voice.Speaker==29,"manual Spanish bypasses short-text detection and selects Spanish male voice");
+        speech.Stop(); await spanish.WaitAsync(TimeSpan.FromSeconds(5));
+        var autoSpanish=speech.PlayAsync("Hola, esta es una prueba de lectura en español.",1f,28,"auto");
+        await Until(()=>voice.Speaker==28 && speech.Status.Phase==SpeechPhase.Playing);
+        Check(voice.Language=="es","automatic Spanish selection reaches the Spanish phonemizer");
+        speech.Stop(); await autoSpanish.WaitAsync(TimeSpan.FromSeconds(5));
+        var autoJapanese=speech.PlayAsync("こんにちは。これは日本語の読み上げテストです。",1f,37,"auto");
+        await Until(()=>voice.Speaker==37 && speech.Status.Phase==SpeechPhase.Playing);
+        Check(voice.Language=="ja","automatic Japanese selection reaches the Japanese voice");
+        speech.Stop(); await autoJapanese.WaitAsync(TimeSpan.FromSeconds(5));
+        var manualJapanese=speech.PlayAsync("日本語",1.25f,41,"ja");
+        await Until(()=>voice.Speaker==41 && speech.Status.Phase==SpeechPhase.Playing);
+        Check(voice.Language=="ja" && voice.Speed==1.25f,"manual Japanese supports kanji-only text and male voice");
+        speech.Stop(); await manualJapanese.WaitAsync(TimeSpan.FromSeconds(5));
+        await speech.PlayAsync("Hola",1f,28,"auto");
+        Check(speech.Status.Error is AppError unknown && unknown.Key=="SpeechLanguageUnknown","uncertain automatic selection does not play an English voice");
+        await speech.PlayAsync("Hola, esta es una prueba de lectura en español.",1f,3,"es");
+        Check(speech.Status.Phase==SpeechPhase.Failed,"English speaker cannot be used with Spanish pronunciation");
         await speech.PlayAsync("你好",1f);
         Check(speech.Status.Phase==SpeechPhase.Failed && speech.Status.Error is AppError e && e.Key=="SpeechEnglishOnly","unsupported non-English selection gives a readable error");
         await speech.PlayAsync("Some English text.",float.NaN);
@@ -61,8 +88,9 @@ internal static class SpeechTests
             { using var stream=File.Create(Path.Combine(folder,file)); stream.SetLength(length); }
             Directory.CreateDirectory(Path.Combine(folder,"espeak-ng-data"));
             Directory.CreateDirectory(Path.Combine(folder,"espeak-ng-data/lang/gmw"));
+            Directory.CreateDirectory(Path.Combine(folder,"espeak-ng-data/lang/roa"));
             Check(!SpeechModel.IsReady(folder),"missing phonemization and lexicon data disable speech");
-            foreach(var file in new[]{"tokens.txt","lexicon-us-en.txt","espeak-ng-data/phondata","espeak-ng-data/phonindex","espeak-ng-data/phontab","espeak-ng-data/en_dict","espeak-ng-data/lang/gmw/en-US"})
+            foreach(var file in new[]{"tokens.txt","lexicon-us-en.txt","espeak-ng-data/phondata","espeak-ng-data/phonindex","espeak-ng-data/phontab","espeak-ng-data/en_dict","espeak-ng-data/lang/gmw/en-US","espeak-ng-data/es_dict","espeak-ng-data/lang/roa/es"})
                 File.WriteAllText(Path.Combine(folder,file),"fixture");
             Check(SpeechModel.IsReady(folder),"complete model file inventory enables readiness");
             File.WriteAllBytes(Path.Combine(folder,"voices.bin"),[]);
@@ -119,6 +147,41 @@ internal static class SpeechTests
         await completed.WaitAsync(TimeSpan.FromSeconds(60));
         Check(player.Status.Phase==SpeechPhase.Completed,"real playback drains completely and reports finished");
     }
+    internal static async Task RunBilingual(string outputDirectory)
+    {
+        Directory.CreateDirectory(outputDirectory);
+        using var voice=new KokoroVoice();
+        foreach(var (language,speaker,text) in new[]{
+            ("en",3,"Select a passage and listen to the original English text, spoken naturally on your own computer."),
+            ("es",28,"Hola, esta es una prueba de lectura en español. Puedes pausar, continuar o detener la lectura."),
+            ("es",29,"Hola, esta es una prueba de lectura en español. Puedes pausar, continuar o detener la lectura."),
+            ("en",16,"Select a passage and listen to the original English text, spoken naturally on your own computer.")})
+        {
+            await voice.PrepareAsync(new Progress<int>(_=>{}),CancellationToken.None,language);
+            var samples=new List<float>();
+            voice.Generate(text,1f,x=>samples.AddRange(x),CancellationToken.None,speaker);
+            Check(samples.Count>24000 && samples.All(float.IsFinite) && samples.Any(x=>Math.Abs(x)>0.01),$"real {language} speaker {speaker} synthesis after language switch");
+            using var file=new WaveFileWriter(Path.Combine(outputDirectory,$"integrated-{language}-{speaker}.wav"),new WaveFormat(24000,16,1));
+            file.WriteSamples(samples.ToArray(),0,samples.Count);
+        }
+        SpeechOutput? device=null;
+        using var player=new SpeechService(new KokoroVoice(),rate=>device=new SpeechOutput(rate));
+        var task=player.PlayAsync("Hola, esta es una prueba de lectura en español. Puedes pausar, continuar o detener la lectura.",1f,28,"auto");
+        await Until(()=>player.Status.Phase is SpeechPhase.Playing or SpeechPhase.Failed,30000);
+        if(player.Status.Phase==SpeechPhase.Failed) throw player.Status.Error!;
+        await Until(()=>device!.PlayedBytes>4000);
+        player.TogglePause(); await Task.Delay(250); var position=device!.PlayedBytes; await Task.Delay(300);
+        Check(player.Status.Phase==SpeechPhase.Paused && device.PlayedBytes==position,"real Spanish playback pauses");
+        player.TogglePause(); await Until(()=>device.PlayedBytes>position);
+        Check(player.Status.Phase==SpeechPhase.Playing,"real Spanish playback resumes");
+        await task.WaitAsync(TimeSpan.FromSeconds(30));
+        Check(player.Status.Phase==SpeechPhase.Completed,"automatic Spanish playback drains completely");
+        var stopped=player.PlayAsync("Esta es otra prueba de lectura en español para comprobar que se puede detener.",1.25f,29,"es");
+        await Until(()=>player.Status.Phase is SpeechPhase.Playing or SpeechPhase.Failed,30000);
+        if(player.Status.Phase==SpeechPhase.Failed) throw player.Status.Error!;
+        player.Stop(); await stopped.WaitAsync(TimeSpan.FromSeconds(10));
+        Check(player.Status.Phase==SpeechPhase.Stopped,"real Spanish male playback stops");
+    }
     sealed class FakeVoice : ISpeechVoice
     {
         public int SampleRate=>24000;
@@ -127,7 +190,8 @@ internal static class SpeechTests
         internal string LastText="";
         int concurrent;
         internal int MaxConcurrent;
-        public Task PrepareAsync(IProgress<int> progress,CancellationToken token) { token.ThrowIfCancellationRequested(); return Task.CompletedTask; }
+        public string Language="";
+        public Task PrepareAsync(IProgress<int> progress,CancellationToken token,string language="en") { Language=language; token.ThrowIfCancellationRequested(); return Task.CompletedTask; }
         public void Generate(string text,float speed,Action<float[]> receive,CancellationToken token,int speakerId=3)
         {
             int active=Interlocked.Increment(ref concurrent); MaxConcurrent=Math.Max(MaxConcurrent,active);

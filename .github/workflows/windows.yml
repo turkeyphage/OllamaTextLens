@@ -61,10 +61,25 @@ jobs:
             $version = "$coreVersion-dev.$env:GITHUB_RUN_NUMBER"
           }
           "version=$version" >> $env:GITHUB_OUTPUT
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: scripts/japanese-requirements.txt
+      - name: Build standalone Japanese speech component
+        run: ./scripts/build-japanese-speech.ps1 -Python (Get-Command python).Source
+      - name: Install checksum-verified Kokoro model for testing only
+        run: ./scripts/install-speech-model.ps1
+      - name: Test packaged Japanese voices without an audio device
+        run: dotnet run --project tests/Smoke.csproj -c Release -- --speech-japanese-synthesis artifacts/test
       - name: Publish single-file EXE and ZIP
         env:
           RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: ./scripts/publish.ps1 -Version $env:RELEASE_VERSION
+      - name: Verify release ZIP and checksums
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: ./scripts/check-release.ps1 -Version $env:RELEASE_VERSION
       - name: Save downloadable workflow artifacts
         uses: actions/upload-artifact@v7
         with:
@@ -82,7 +97,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $assets = @(Get-ChildItem -LiteralPath dist -File | ForEach-Object { $_.FullName })
-          $releaseArgs = @('release', 'create', $env:RELEASE_TAG, '--verify-tag', '--generate-notes', '--title', "OllamaTextLens $env:RELEASE_TAG")
+          $releaseArgs = @('release', 'create', $env:RELEASE_TAG, '--verify-tag', '--notes-file', 'docs/release-notes.md', '--title', "OllamaTextLens $env:RELEASE_TAG")
           if ($env:RELEASE_VERSION.Contains('-')) { $releaseArgs += @('--prerelease', '--latest=false') }
           & gh @releaseArgs @assets
           if ($LASTEXITCODE -ne 0) { throw 'GitHub Release creation failed. Existing release assets are not overwritten.' }

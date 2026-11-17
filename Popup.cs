@@ -22,6 +22,12 @@ internal sealed class Popup : Window
     readonly ComboBox speechVoice=new() { Width=178,DisplayMemberPath="Name",SelectedValuePath="Id",Padding=new Thickness(5,3,5,3),Margin=new Thickness(4,0,10,0) };
     readonly TextBlock speechVoiceLabel=new() { VerticalAlignment=VerticalAlignment.Center };
     readonly TextBlock speechRateLabel=new() { VerticalAlignment=VerticalAlignment.Center };
+    readonly ComboBox speechLanguage=new() { Width=150,DisplayMemberPath="Name",SelectedValuePath="Id",Margin=new Thickness(4,0,10,0),Padding=new Thickness(5,3,5,3) };
+    readonly TextBlock speechLanguageLabel=new() { VerticalAlignment=VerticalAlignment.Center };
+    readonly TextBlock detectedLanguage=new() { FontSize=12,Foreground=Brushes.SlateGray,TextWrapping=TextWrapping.Wrap };
+    string? detected;
+    bool updatingSpeech;
+    string? ResolvedSpeechLanguage=>speechLanguage.SelectedValue is string id && id!="auto"?id:detected;
     readonly TextBlock speechState=new() { FontSize=12,Foreground=Brushes.SlateGray,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,6,0,0) };
     string uiLanguage="zh-TW", targetLanguage="zh-TW", statusKey="Preparing";
     object[] statusArgs=[];
@@ -51,12 +57,15 @@ internal sealed class Popup : Window
                 controls.Children.Add(label);
                 foreach(var button in new[]{speak,pauseSpeech,stopSpeech})
                 { button.Padding=new Thickness(8,4,8,4); button.Margin=new Thickness(0,0,6,6); controls.Children.Add(button); }
+                var languageControls=new StackPanel { Orientation=Orientation.Horizontal,Margin=new Thickness(0,0,0,6) };
+                languageControls.Children.Add(speechLanguageLabel); languageControls.Children.Add(speechLanguage);
+                controls.Children.Add(languageControls);
                 var voiceControls=new StackPanel { Orientation=Orientation.Horizontal,Margin=new Thickness(0,0,0,6) };
                 voiceControls.Children.Add(speechVoiceLabel); voiceControls.Children.Add(speechVoice);
                 controls.Children.Add(voiceControls);
                 var speedControls=new StackPanel { Orientation=Orientation.Horizontal,Margin=new Thickness(0,0,0,6) };
                 speedControls.Children.Add(speechRateLabel); speedControls.Children.Add(speechRate);
-                controls.Children.Add(speedControls); content.Children.Add(controls); content.Children.Add(speechState);
+                controls.Children.Add(speedControls); content.Children.Add(controls); content.Children.Add(detectedLanguage); content.Children.Add(speechState);
             }
             else content.Children.Add(label);
             content.Children.Add(text);
@@ -73,7 +82,11 @@ internal sealed class Popup : Window
         modelTimer.Tick+=(_,_)=>RenderSpeech();
         IsVisibleChanged+=(_,_)=> { if(IsVisible) { modelTimer.Start(); RenderSpeech(); } else modelTimer.Stop(); };
         speechRate.ItemsSource=new[]{"0.75×","1.0×","1.25×","1.5×","2.0×"}; speechRate.SelectedIndex=1;
-        speak.Click+=async(_,_)=>await speech.PlayAsync(original.Text,new[]{0.75f,1f,1.25f,1.5f,2f}[speechRate.SelectedIndex],speechVoice.SelectedValue is int voice?voice:3);
+        speechLanguage.SelectionChanged+=(_,_)=> { if(!updatingSpeech) { UpdateSpeechVoices(); RenderSpeech(); } };
+        speak.Click+=async(_,_)=> {
+            if(ResolvedSpeechLanguage is not string language) return;
+            await speech.PlayAsync(original.Text,new[]{0.75f,1f,1.25f,1.5f,2f}[speechRate.SelectedIndex],speechVoice.SelectedValue is int voice?voice:3,language);
+        };
         pauseSpeech.Click+=(_,_)=>speech.TogglePause(); stopSpeech.Click+=(_,_)=>speech.Stop();
         speech.Changed+=()=> {
             if(App.IsExiting || Dispatcher.HasShutdownStarted) return;
@@ -88,16 +101,21 @@ internal sealed class Popup : Window
         bool modelReady=SpeechModel.IsReady(SpeechModel.DirectoryPath);
         bool active=value.Phase is SpeechPhase.Downloading or SpeechPhase.Preparing or SpeechPhase.Playing or SpeechPhase.Paused;
         if(!modelReady && active) { speech.Stop(); value=speech.Status; active=false; }
-        speak.Content=I18n.Text(uiLanguage,"SpeechPlay"); speak.IsEnabled=modelReady && !active && !string.IsNullOrWhiteSpace(original.Text);
+        bool japaneseReady=ResolvedSpeechLanguage!="ja" || JapaneseSpeech.IsAvailable;
+        speak.Content=I18n.Text(uiLanguage,"SpeechPlay"); speak.IsEnabled=modelReady && japaneseReady && !active && ResolvedSpeechLanguage!=null && !string.IsNullOrWhiteSpace(original.Text);
         speak.ToolTip=modelReady?null:I18n.Text(uiLanguage,"SpeechModelMissing");
         pauseSpeech.Content=I18n.Text(uiLanguage,value.Phase==SpeechPhase.Paused?"SpeechResume":"SpeechPause");
         pauseSpeech.IsEnabled=value.Phase is SpeechPhase.Playing or SpeechPhase.Paused;
         stopSpeech.Content=I18n.Text(uiLanguage,"SpeechStop"); stopSpeech.IsEnabled=active;
         speechRateLabel.Text=I18n.Text(uiLanguage,"SpeechRate"); speechRate.IsEnabled=modelReady && !active;
         speechVoiceLabel.Text=I18n.Text(uiLanguage,"SpeechVoice"); speechVoice.IsEnabled=modelReady && !active;
+        speechLanguageLabel.Text=I18n.Text(uiLanguage,"SpeechLanguage"); speechLanguage.IsEnabled=!active;
+        detectedLanguage.Text=ResolvedSpeechLanguage is string selected?
+            I18n.Text(uiLanguage,(speechLanguage.SelectedValue as string)=="auto"?"SpeechDetected":"SpeechManual",selected switch { "es"=>"Español","ja"=>"日本語",_=>"English" }):
+            I18n.Text(uiLanguage,"SpeechLanguageUnknown");
         speechVoice.ToolTip=I18n.Text(uiLanguage,"SpeechVoiceHint");
         speechRate.ToolTip=I18n.Text(uiLanguage,"SpeechRateHint");
-        speechState.Text=!modelReady?I18n.Text(uiLanguage,"SpeechModelMissing"):
+        speechState.Text=!modelReady?I18n.Text(uiLanguage,"SpeechModelMissing"):!japaneseReady?I18n.Text(uiLanguage,"SpeechJapaneseMissing"):
             value.Phase==SpeechPhase.Downloading?I18n.Text(uiLanguage,"SpeechDownloading",value.Progress):
             value.Phase==SpeechPhase.Failed?I18n.Text(uiLanguage,"SpeechFailed")+" "+(value.Error is AppError?I18n.Error(uiLanguage,value.Error):I18n.Text(uiLanguage,"SpeechRetry")):
             I18n.Text(uiLanguage,"Speech"+value.Phase);
@@ -105,9 +123,12 @@ internal sealed class Popup : Window
     internal void SetLanguage(string language)
     {
         uiLanguage=Languages.Ui(language).Id;
-        var selectedVoice=speechVoice.SelectedValue is int voice?voice:3;
-        speechVoice.ItemsSource=new[]{new SpeechVoiceChoice(3,I18n.Text(uiLanguage,"SpeechFemaleVoice")),new SpeechVoiceChoice(16,I18n.Text(uiLanguage,"SpeechMaleVoice"))};
-        speechVoice.SelectedValue=selectedVoice;
+        var selectedLanguage=speechLanguage.SelectedValue as string??"auto";
+        updatingSpeech=true;
+        speechLanguage.ItemsSource=new[]{new SpeechLanguageChoice("auto",I18n.Text(uiLanguage,"SpeechAuto")),new SpeechLanguageChoice("en","English"),new SpeechLanguageChoice("es","Español"),new SpeechLanguageChoice("ja","日本語")};
+        speechLanguage.SelectedValue=selectedLanguage;
+        updatingSpeech=false;
+        UpdateSpeechVoices();
         Language=System.Windows.Markup.XmlLanguage.GetLanguage(uiLanguage);
         Title=heading.Text=I18n.Text(uiLanguage,"PopupTitle"); close.Content=I18n.Text(uiLanguage,"Close");
         originalLabel.Text=I18n.Text(uiLanguage,"Original");
@@ -121,6 +142,8 @@ internal sealed class Popup : Window
     {
         speech.Stop();
         original.Text=originalText; translation.Text=""; explanation.Text=""; shownError=null;
+        detected=SpeechLanguage.Detect(originalText);
+        if(source=="SpeechDemo") { updatingSpeech=true; speechLanguage.SelectedValue="auto"; updatingSpeech=false; }
         targetLanguage=Languages.Target(target).Id; Status(source); SetLanguage(uiLanguage);
         scroll.ScrollToTop();
         Show();
@@ -142,4 +165,16 @@ internal sealed class Popup : Window
     internal void ShowError(Exception error) { shownError=error; translation.Text=I18n.Error(uiLanguage,error); explanation.Text=""; }
     internal void Status(string key,params object[] args) { statusKey=key; statusArgs=args; state.Text=I18n.Text(uiLanguage,key,args); }
     sealed record SpeechVoiceChoice(int Id,string Name);
+    sealed record SpeechLanguageChoice(string Id,string Name);
+    void UpdateSpeechVoices()
+    {
+        bool male=speechVoice.SelectedValue is int id && id is 16 or 29 or 41;
+        bool japanese=ResolvedSpeechLanguage=="ja";
+        bool spanish=ResolvedSpeechLanguage=="es";
+        speechVoice.ItemsSource=japanese?
+            new[]{new SpeechVoiceChoice(37,I18n.Text(uiLanguage,"SpeechJapaneseFemale")),new SpeechVoiceChoice(41,I18n.Text(uiLanguage,"SpeechJapaneseMale"))}:spanish?
+            new[]{new SpeechVoiceChoice(28,I18n.Text(uiLanguage,"SpeechSpanishFemale")),new SpeechVoiceChoice(29,I18n.Text(uiLanguage,"SpeechSpanishMale"))}:
+            new[]{new SpeechVoiceChoice(3,I18n.Text(uiLanguage,"SpeechFemaleVoice")),new SpeechVoiceChoice(16,I18n.Text(uiLanguage,"SpeechMaleVoice"))};
+        speechVoice.SelectedValue=japanese?(male?41:37):spanish?(male?29:28):(male?16:3);
+    }
 }

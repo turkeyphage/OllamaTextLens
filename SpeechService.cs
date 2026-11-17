@@ -6,7 +6,7 @@ internal enum SpeechPhase { Ready, Downloading, Preparing, Playing, Paused, Stop
 internal sealed record SpeechStatus(SpeechPhase Phase, int Progress=0, Exception? Error=null);
 internal interface ISpeechVoice : IDisposable
 {
-    Task PrepareAsync(IProgress<int> progress,CancellationToken token);
+    Task PrepareAsync(IProgress<int> progress,CancellationToken token,string language="en");
     int SampleRate { get; }
     void Generate(string text,float speed,Action<float[]> receive,CancellationToken token,int speakerId=3);
 }
@@ -61,7 +61,7 @@ internal sealed class SpeechService : IDisposable
         lock(sync) { if(current!=session || session.IsCancellationRequested) return; status=value; }
         Changed?.Invoke();
     }
-    internal async Task PlayAsync(string text,float speed,int speakerId=3)
+    internal async Task PlayAsync(string text,float speed,int speakerId=3,string language="en")
     {
         Stop();
         var session=new CancellationTokenSource();
@@ -76,13 +76,14 @@ internal sealed class SpeechService : IDisposable
         try
         {
             text=SpeechText.Normalize(text);
-            if(!Regex.IsMatch(text,"[A-Za-z]")) throw new AppError("SpeechEnglishOnly");
+            if(language=="auto") language=SpeechLanguage.Detect(text)??throw new AppError("SpeechLanguageUnknown");
+            if(language is not ("en" or "es" or "ja") || !Regex.IsMatch(text,language=="ja"?@"\p{L}":"[A-Za-z]")) throw new AppError("SpeechEnglishOnly");
             if(text.Length>12000) throw new AppError("TextTooLong");
             if(!float.IsFinite(speed) || speed<0.5f || speed>2f) throw new ArgumentOutOfRangeException(nameof(speed));
-            if(speakerId is not (3 or 16)) throw new ArgumentOutOfRangeException(nameof(speakerId));
+            if(!SpeechLanguage.IsSpeaker(language,speakerId)) throw new ArgumentOutOfRangeException(nameof(speakerId));
             await generation.WaitAsync(session.Token); acquired=true;
             await Task.Run(async()=> {
-                await voice.PrepareAsync(new DirectProgress(p=>Publish(session,new(SpeechPhase.Downloading,p))),session.Token);
+                await voice.PrepareAsync(new DirectProgress(p=>Publish(session,new(SpeechPhase.Downloading,p))),session.Token,language);
                 session.Token.ThrowIfCancellationRequested();
                 Publish(session,new(SpeechPhase.Preparing));
                 activeOutput=outputFactory(voice.SampleRate);

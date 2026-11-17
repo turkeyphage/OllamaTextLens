@@ -26,6 +26,8 @@
       <Button x:Name="SaveButton" Click="Save_Click" Margin="0,0,8,8"/>
       <Button x:Name="TestButton" Click="Test_Click" Margin="0,0,8,8"/>
       <Button x:Name="SpeechTestButton" Click="SpeechTest_Click" Margin="0,0,8,8"/>
+      <Button x:Name="SpeechSpanishTestButton" Click="SpeechTest_Click" Margin="0,0,8,8"/>
+      <Button x:Name="SpeechJapaneseTestButton" Click="SpeechTest_Click" Margin="0,0,8,8"/>
       <Button x:Name="InstallSpeechButton" Click="InstallSpeech_Click" Margin="0,0,8,8"/>
     </WrapPanel>
     <TextBlock x:Name="SpeechModelStatus" Margin="0,6,0,0" TextWrapping="Wrap" Foreground="#64748B"/>

@@ -92,6 +92,8 @@ public partial class MainWindow : Window
         EndpointLabel.Text=T("Endpoint"); ModelLabel.Text=T("Model"); PrivacyLabel.Text=T("Privacy");
         RefreshButton.Content=T("Refresh"); SaveButton.Content=T("Save"); TestButton.Content=T("Test");
         SpeechTestButton.Content=T("SpeechTest");
+        SpeechSpanishTestButton.Content=T("SpeechTestSpanish");
+        SpeechJapaneseTestButton.Content=T("SpeechTestJapanese");
         RefreshSpeechAvailability();
         Status.Text=T(statusKey)+(statusDetail.Length==0?"":" "+statusDetail);
         popup.SetLanguage(uiLanguage);
@@ -233,15 +235,23 @@ public partial class MainWindow : Window
     {
         RefreshSpeechAvailability();
         if(!SpeechTestButton.IsEnabled) return;
+        if(sender==SpeechJapaneseTestButton && !SpeechJapaneseTestButton.IsEnabled) return;
         pending?.Cancel(); pending=null;
         Native.GetCursorPos(out var point);
-        popup.Begin(point,"SpeechDemo","Welcome to OllamaTextLens. Select a passage and listen to the original English text, spoken naturally on your own computer. You can pause, continue, stop, or choose a different reading speed.",targetLanguage);
+        var sample=sender==SpeechJapaneseTestButton?
+            "こんにちは。これは日本語の読み上げテストです。文章を選択すると、自然な声で原文を聞くことができます。途中で一時停止したり、読み上げの速さを変えたりできます。":sender==SpeechSpanishTestButton?
+            "Hola, esta es una prueba de lectura en español. Selecciona un fragmento de texto y escucha su pronunciación natural, sin enviar el contenido a un servicio de pago.":
+            "Welcome to OllamaTextLens. Select a passage and listen to the original English text, spoken naturally on your own computer. You can pause, continue, stop, or choose a different reading speed.";
+        popup.Begin(point,"SpeechDemo",sample,targetLanguage);
     }
     void RefreshSpeechAvailability()
     {
         var state=SpeechModel.Inspect(SpeechModel.DirectoryPath);
         bool ready=state==SpeechModelState.Ready;
         SpeechTestButton.IsEnabled=ready && speechInstall==null;
+        SpeechSpanishTestButton.IsEnabled=SpeechTestButton.IsEnabled;
+        SpeechJapaneseTestButton.IsEnabled=SpeechTestButton.IsEnabled && JapaneseSpeech.IsAvailable;
+        SpeechJapaneseTestButton.ToolTip=JapaneseSpeech.IsAvailable?null:I18n.Text(uiLanguage,"SpeechJapaneseMissing");
         InstallSpeechButton.IsEnabled=!ready || speechInstall!=null;
         InstallSpeechButton.Content=I18n.Text(uiLanguage,speechInstall!=null?"SpeechCancelDownload":"SpeechInstall");
         string key=ready?"SpeechModelInstalled":state==SpeechModelState.Missing?"SpeechModelNotInstalled":"SpeechModelIncomplete";

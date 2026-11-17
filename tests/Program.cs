@@ -2,6 +2,10 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using OllamaTextLens;
+if(args.Length==2 && args[0]=="--speech-japanese-synthesis") { await JapaneseSpeechTests.Run(args[1],playback:false); return; }
+if(args.Length==2 && args[0]=="--speech-japanese") { await JapaneseSpeechTests.Run(args[1]); return; }
+if(args.Length==2 && args[0]=="--speech-bilingual") { await SpeechTests.RunBilingual(args[1]); return; }
+if(args.Length==2 && args[0]=="--spanish-trial") { KokoroSpanishTrials.Run(args[1]); return; }
 if(args.Length==2 && args[0]=="--app-lifetime") { AppLifetimeTests.Run(args[1]); return; }
 if(args.Length==2 && args[0]=="--speech-live") { await SpeechTests.RunLive(args[1]); return; }
 if(SingleInstanceTests.TryRunProbe(args)) return;

@@ -27,7 +27,7 @@ internal static class SpeechModel
                 var file=new FileInfo(Path.Combine(directory,name));
                 if(!file.Exists || file.Length!=size) return SpeechModelState.Incomplete;
             }
-            foreach(var name in new[]{"tokens.txt","lexicon-us-en.txt","espeak-ng-data/phondata","espeak-ng-data/phonindex","espeak-ng-data/phontab","espeak-ng-data/en_dict","espeak-ng-data/lang/gmw/en-US"})
+            foreach(var name in new[]{"tokens.txt","lexicon-us-en.txt","espeak-ng-data/phondata","espeak-ng-data/phonindex","espeak-ng-data/phontab","espeak-ng-data/en_dict","espeak-ng-data/lang/gmw/en-US","espeak-ng-data/es_dict","espeak-ng-data/lang/roa/es"})
             {
                 var file=new FileInfo(Path.Combine(directory,name));
                 if(!file.Exists || file.Length==0) return SpeechModelState.Incomplete;
@@ -100,35 +100,45 @@ internal static class SpeechModel
     }
 }
 
-internal sealed class KokoroVoice(string? modelDirectory=null) : ISpeechVoice
+internal sealed class KokoroVoice(string? modelDirectory=null,string? japaneseExecutable=null) : ISpeechVoice
 {
     OfflineTts? engine;
+    string engineLanguage="";
+    readonly JapaneseSpeech japanese=new(japaneseExecutable);
     public int SampleRate=>engine?.SampleRate??24000;
-    public Task PrepareAsync(IProgress<int> progress,CancellationToken token)
+    public async Task PrepareAsync(IProgress<int> progress,CancellationToken token,string language="en")
     {
         token.ThrowIfCancellationRequested();
         // Playback never installs or downloads. Installation is an explicit settings action.
         var folder=modelDirectory??SpeechModel.DirectoryPath;
         if(!SpeechModel.IsReady(folder)) throw new AppError("SpeechModelMissing");
-        if(engine!=null) return Task.CompletedTask;
+        if(language=="ja") {
+            engine?.Dispose(); engine=null;
+            await japanese.PrepareAsync(folder,token); engineLanguage=language; return;
+        }
+        japanese.Dispose();
+        if(language is not ("en" or "es")) throw new AppError("SpeechEnglishOnly");
+        if(engine!=null && engineLanguage==language) return;
+        engine?.Dispose(); engine=null;
         var config=new OfflineTtsConfig();
         config.Model.Kokoro.Model=Path.Combine(folder,"model.int8.onnx");
         config.Model.Kokoro.Voices=Path.Combine(folder,"voices.bin");
         config.Model.Kokoro.Tokens=Path.Combine(folder,"tokens.txt");
         config.Model.Kokoro.DataDir=Path.Combine(folder,"espeak-ng-data");
-        config.Model.Kokoro.Lexicon=Path.Combine(folder,"lexicon-us-en.txt");
-        config.Model.Kokoro.Lang="en-us";
+        config.Model.Kokoro.Lexicon=language=="en"?Path.Combine(folder,"lexicon-us-en.txt"):"";
+        config.Model.Kokoro.Lang=language=="en"?"en-us":"es";
         config.Model.NumThreads=Math.Clamp(Environment.ProcessorCount/2,1,4);
         config.Model.Provider="cpu";
         config.MaxNumSentences=1;
         engine=new OfflineTts(config);
-        if(engine.SampleRate<=0 || engine.NumSpeakers<=16) throw new AppError("SpeechModelFailed");
-        return Task.CompletedTask;
+        engineLanguage=language;
+        if(engine.SampleRate<=0 || engine.NumSpeakers<=29) throw new AppError("SpeechModelFailed");
     }
     public void Generate(string text,float speed,Action<float[]> receive,CancellationToken token,int speakerId=3)
     {
         token.ThrowIfCancellationRequested();
-        if(speakerId is not (3 or 16)) throw new ArgumentOutOfRangeException(nameof(speakerId));
+        if(!SpeechLanguage.IsSpeaker(engineLanguage,speakerId)) throw new ArgumentOutOfRangeException(nameof(speakerId));
+        if(engineLanguage=="ja") { japanese.Generate(text,speed,speakerId,receive,token); return; }
         Exception? callbackError=null;
         OfflineTtsCallback callback=(pointer,count)=> {
             if(token.IsCancellationRequested) return 0;
@@ -149,5 +159,5 @@ internal sealed class KokoroVoice(string? modelDirectory=null) : ISpeechVoice
         }
         finally { audio.Dispose(); GC.KeepAlive(callback); }
     }
-    public void Dispose() { engine?.Dispose(); engine=null; }
+    public void Dispose() { engine?.Dispose(); engine=null; japanese.Dispose(); }
 }

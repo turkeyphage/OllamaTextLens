@@ -6,6 +6,7 @@ $testOutput = Join-Path $projectRoot 'artifacts\test'
 & dotnet build (Join-Path $projectRoot 'OllamaTextLens.csproj') -c Release -t:Rebuild -o $testOutput
 if ($LASTEXITCODE -ne 0) { throw 'Test build failed. If the app is running, choose Exit from its tray menu and try again.' }
 Copy-Item -LiteralPath (Join-Path $projectRoot 'LICENSE'), (Join-Path $projectRoot 'THIRD-PARTY-NOTICES.md') -Destination $testOutput -Force
+Copy-Item -LiteralPath (Join-Path $projectRoot 'Assets\NTextCat-LICENSE.txt') -Destination $testOutput -Force
 # Notify Explorer about this rebuilt EXE without clearing unrelated shell caches.
 if (-not ('OllamaTextLens.BuildShell' -as [type])) {
     Add-Type @'
